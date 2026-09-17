@@ -9,7 +9,7 @@ call .venv\Scripts\activate.bat
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 pip install pyinstaller
-pyinstaller --clean --noconfirm windows\DhilipHomeServer.spec
+python -m PyInstaller --clean --noconfirm windows\DhilipHomeServer.spec
 if errorlevel 1 goto failed
 echo.
 echo BUILD COMPLETE
