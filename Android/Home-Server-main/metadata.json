@@ -1,0 +1,6 @@
+{
+  "name": "DHILIP HOME",
+  "description": "Personal home-server ecosystem dashboard, cloud files, media center, and server administration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,131 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <!-- Dark modern background with gradient -->
+    <path
+        android:pathData="M0,0h320v180h-320z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:angle="135"
+                android:endColor="#0B1120"
+                android:startColor="#1E293B"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
+
+    <!-- Subtle accent glow circle on left -->
+    <path
+        android:pathData="M70,90m-50,0a50,50 0 1,1 100,0a50,50 0 1,1 -100,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:gradientRadius="50"
+                android:centerX="70"
+                android:centerY="90"
+                android:startColor="#3338BDF8"
+                android:endColor="#000284C7"
+                android:type="radial" />
+        </aapt:attr>
+    </path>
+
+    <!-- Server Rack / Cloud Graphic -->
+    <!-- Server chassis 1 -->
+    <path
+        android:fillColor="#334155"
+        android:pathData="M40,55h60c3.3,0 6,2.7 6,6v14c0,3.3 -2.7,6 -6,6h-60c-3.3,0 -6,-2.7 -6,-6v-14c0,-3.3 2.7,-6 6,-6z" />
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M44,68a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M54,68a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+    <path
+        android:fillColor="#64748B"
+        android:pathData="M66,66h28v4h-28z" />
+
+    <!-- Server chassis 2 -->
+    <path
+        android:fillColor="#1E293B"
+        android:pathData="M40,86h60c3.3,0 6,2.7 6,6v14c0,3.3 -2.7,6 -6,6h-60c-3.3,0 -6,-2.7 -6,-6v-14c0,-3.3 2.7,-6 6,-6z" />
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M44,99a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M54,99a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+    <path
+        android:fillColor="#64748B"
+        android:pathData="M66,97h28v4h-28z" />
+
+    <!-- Server chassis 3 -->
+    <path
+        android:fillColor="#334155"
+        android:pathData="M40,117h60c3.3,0 6,2.7 6,6v14c0,3.3 -2.7,6 -6,6h-60c-3.3,0 -6,-2.7 -6,-6v-14c0,-3.3 2.7,-6 6,-6z" />
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M44,130a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M54,130a3,3 0 1,0 6,0a3,3 0 1,0 -6,0" />
+    <path
+        android:fillColor="#64748B"
+        android:pathData="M66,128h28v4h-28z" />
+
+    <!-- Play/VLC Accent cone accent -->
+    <path
+        android:fillColor="#FF8800"
+        android:pathData="M116,90l-12,-8v16z" />
+
+    <!-- Modern Typography bar accents -->
+    <!-- D -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M130,68h12c7,0 12,4.5 12,11.5c0,7 -5,11.5 -12,11.5h-12v-23z M136,73v13h6c3.5,0 6,-2 6,-6.5c0,-4.5 -2.5,-6.5 -6,-6.5h-6z" />
+    <!-- H -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M160,68h6v9h10v-9h6v23h-6v-9h-10v9h-6v-23z" />
+    <!-- I -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M188,68h6v23h-6v-23z" />
+    <!-- L -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M200,68h6v18h12v5h-18v-23z" />
+    <!-- I -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M224,68h6v23h-6v-23z" />
+    <!-- P -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M236,68h12c5,0 9,3 9,8c0,5 -4,8 -9,8h-6v7h-6v-23z M242,73v6h6c2,0 4,-1 4,-3c0,-2 -2,-3 -4,-3h-6z" />
+
+    <!-- Subtitle: HOME SERVER & TV -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M130,105h4v6h6v-6h4v15h-4v-6h-6v6h-4v-15z" />
+    <!-- O -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M148,105h7c4,0 7,3 7,7.5c0,4.5 -3,7.5 -7,7.5h-7v-15z M152,108v9h3c2.5,0 4,-1.5 4,-4.5c0,-3 -1.5,-4.5 -4,-4.5h-3z" />
+    <!-- M -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M166,105h4l3,7l3,-7h4v15h-4v-9l-3,7h-2l-3,-7v9h-3v-15z" />
+    <!-- E -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M184,105h10v3h-7v3h6v3h-6v3h7v3h-10v-15z" />
+
+    <!-- Decorative TV pill -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M202,107h36c2,0 4,2 4,4v7c0,2 -2,4 -4,4h-36c-2,0 -4,-2 -4,-4v-7c0,-2 2,-4 4,-4z" />
+    <path
+        android:fillColor="#0B1120"
+        android:pathData="M208,110h8v2h-3v7h-2v-7h-3v-2z M218,110h2l3,7l3,-7h2l-4,9h-2l-4,-9z" />
+</vector>
