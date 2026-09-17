@@ -5,7 +5,9 @@ import threading
 from pathlib import Path
 
 import requests
-from PySide6.QtCore import Qt, QTimer, QUrl
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, QUrl
+from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
@@ -13,6 +15,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QFileDialog,
     QFrame,
+    QSlider,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
@@ -35,6 +38,58 @@ DEFAULT_PORT = int(os.getenv("DHILIPHOME_PORT", "8080"))
 APP_DATA_DIR = Path.home() / ".dhiliphome"
 APP_DATA_DIR.mkdir(parents=True, exist_ok=True)
 SETTINGS_PATH = APP_DATA_DIR / "settings.json"
+
+
+def make_app_icon(size=256):
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.GlobalColor.transparent)
+
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+    bg = QColor(9, 14, 27)
+    glow = QColor(96, 165, 250)
+    purple = QColor(99, 102, 241)
+    cyan = QColor(34, 211, 238)
+    mint = QColor(16, 185, 129)
+    white = QColor(255, 255, 255)
+
+    painter.setPen(Qt.PenStyle.NoPen)
+    painter.setBrush(QBrush(bg))
+    painter.drawRoundedRect(12, 12, size - 24, size - 24, 56, 56)
+
+    glow_brush = QBrush(QColor(80, 125, 255, 80))
+    painter.setBrush(glow_brush)
+    painter.drawEllipse(22, 18, size - 44, size - 44)
+
+    painter.setBrush(QBrush(QColor(18, 24, 38, 210)))
+    painter.drawRoundedRect(28, 28, size - 56, size - 56, 42, 42)
+
+    grad = painter.createLinearGradient(0, 0, size, size)
+    grad.setColorAt(0.0, purple)
+    grad.setColorAt(0.5, QColor(59, 130, 246))
+    grad.setColorAt(1.0, mint)
+    painter.setBrush(grad)
+    painter.drawRoundedRect(42, 42, size - 84, size - 84, 34, 34)
+
+    reflection = QColor(255, 255, 255, 110)
+    painter.setBrush(QBrush(reflection))
+    painter.drawRoundedRect(54, 52, size - 108, 72, 26, 26)
+
+    painter.setPen(QPen(QColor(255, 255, 255, 230), 12, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+    painter.drawLine(size // 2 - 18, 134, size // 2 + 18, 134)
+    painter.drawLine(size // 2, 134, size // 2, 188)
+    painter.drawLine(size // 2 - 28, 188, size // 2 + 28, 188)
+
+    painter.setPen(QPen(QColor(255, 255, 255, 200), 10, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin))
+    painter.drawArc(62, 90, 132, 132, 0, 360 * 16)
+
+    painter.setPen(QPen(QColor(255, 255, 255, 100), 4, Qt.PenStyle.SolidLine))
+    painter.drawArc(72, 100, 112, 112, 220 * 16, 90 * 16)
+
+    painter.end()
+    return QIcon(pixmap)
 
 
 def start_server():
@@ -164,6 +219,7 @@ class DhilipHomeWindow(QMainWindow):
         self.video_widget = QVideoWidget()
         self.media_player.setVideoOutput(self.video_widget)
         self.nav_index = {}
+        self.setWindowIcon(make_app_icon(128))
         self._build_ui()
         self.refresh_timer = QTimer(self)
         self.refresh_timer.timeout.connect(self.refresh_server_state)
@@ -239,10 +295,65 @@ class DhilipHomeWindow(QMainWindow):
         top_bar_layout.setContentsMargins(18, 12, 18, 12)
         top_bar_layout.setSpacing(12)
 
+        self.media_dock = QFrame()
+        self.media_dock.setObjectName("mediaDock")
+        self.media_dock.setMinimumHeight(0)
+        self.media_dock.setMaximumHeight(0)
+        self.media_dock.hide()
+        dock_layout = QHBoxLayout(self.media_dock)
+        dock_layout.setContentsMargins(16, 12, 16, 12)
+        dock_layout.setSpacing(16)
+
+        self.now_playing_label = QLabel("No media playing")
+        self.now_playing_label.setObjectName("nowPlayingTitle")
+        self.now_playing_label.setWordWrap(True)
+
+        self.media_meta_label = QLabel("Server playback")
+        self.media_meta_label.setObjectName("mediaMeta")
+
+        player_btns = QWidget()
+        player_btns_layout = QHBoxLayout(player_btns)
+        player_btns_layout.setContentsMargins(0, 0, 0, 0)
+        self.media_prev_button = QPushButton("⏮")
+        self.media_play_button = QPushButton("▶")
+        self.media_pause_button = QPushButton("⏸")
+        self.media_stop_button = QPushButton("■")
+        self.media_next_button = QPushButton("⏭")
+        for btn in [self.media_prev_button, self.media_play_button, self.media_pause_button, self.media_stop_button, self.media_next_button]:
+            btn.setObjectName("miniMediaButton")
+            btn.setFixedSize(36, 36)
+        self.media_play_button.clicked.connect(self.play_selected_media)
+        self.media_pause_button.clicked.connect(self.media_player.pause)
+        self.media_stop_button.clicked.connect(self.media_player.stop)
+        player_btns_layout.addWidget(self.media_prev_button)
+        player_btns_layout.addWidget(self.media_play_button)
+        player_btns_layout.addWidget(self.media_pause_button)
+        player_btns_layout.addWidget(self.media_stop_button)
+        player_btns_layout.addWidget(self.media_next_button)
+
+        info_panel = QWidget()
+        info_panel_layout = QVBoxLayout(info_panel)
+        info_panel_layout.setContentsMargins(0, 0, 0, 0)
+        info_panel_layout.addWidget(self.now_playing_label)
+        info_panel_layout.addWidget(self.media_meta_label)
+
+        self.video_widget.setMinimumSize(240, 120)
+        self.video_widget.setMaximumSize(420, 180)
+        self.video_widget.setObjectName("videoPreview")
+        dock_layout.addWidget(info_panel, 1)
+        dock_layout.addWidget(player_btns)
+        dock_layout.addWidget(self.video_widget)
+
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("Search files or media")
         self.search_input.setClearButtonEnabled(True)
         self.search_input.returnPressed.connect(self.quick_search)
+
+        self.playback_slider = QSlider(Qt.Orientation.Horizontal)
+        self.playback_slider.setRange(0, 100)
+        self.playback_slider.setValue(0)
+        self.playback_slider.setObjectName("playbackSlider")
+        self.playback_slider.valueChanged.connect(self.seek_media)
 
         self.refresh_button = QPushButton("Refresh")
         self.refresh_button.clicked.connect(self.refresh_all)
@@ -252,6 +363,7 @@ class DhilipHomeWindow(QMainWindow):
         self.open_web_button.clicked.connect(self.open_server_web)
 
         top_bar_layout.addWidget(self.search_input, 1)
+        top_bar_layout.addWidget(self.playback_slider, 2)
         top_bar_layout.addWidget(self.refresh_button)
         top_bar_layout.addWidget(self.theme_toggle_button)
         top_bar_layout.addWidget(self.open_web_button)
@@ -260,8 +372,9 @@ class DhilipHomeWindow(QMainWindow):
         content_panel.setObjectName("contentPanel")
         content_layout = QVBoxLayout(content_panel)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.setSpacing(0)
+        content_layout.setSpacing(14)
         content_layout.addWidget(self.top_bar)
+        content_layout.addWidget(self.media_dock)
         content_layout.addWidget(self.nav, 1)
 
         root.addWidget(sidebar)
@@ -495,6 +608,8 @@ class DhilipHomeWindow(QMainWindow):
             #sidebar { background: rgba(17, 24, 39, 0.88); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 20px; }
             #contentPanel { background: rgba(15, 23, 36, 0.80); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 20px; }
             #topBar { background: rgba(15, 23, 36, 0.6); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 16px; }
+            #mediaDock { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(79,70,229,0.22), stop:1 rgba(16,185,129,0.16)); border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 18px; }
+            #videoPreview { background: rgba(2,6,23,0.9); border: 1px solid rgba(96,165,250,0.25); border-radius: 14px; }
             #brand { color: #F8FAFC; font-size: 25px; font-weight: 700; letter-spacing: 1.8px; }
             #sidebarSubtitle { color: #9AA9BC; font-size: 12px; margin-bottom: 8px; }
             #navButton { background: rgba(148, 163, 184, 0.08); color: #EEF2FF; border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 12px; padding: 12px 14px; text-align: left; }
@@ -505,6 +620,13 @@ class DhilipHomeWindow(QMainWindow):
             #infoCard, #actionGroup { background: rgba(15, 23, 36, 0.8); border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 18px; }
             #cardTitle { color: #9AA9BC; font-size: 11px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; }
             #cardValue { color: #F8FAFC; font-size: 18px; }
+            #nowPlayingTitle { color: #F8FAFC; font-size: 16px; font-weight: 600; }
+            #mediaMeta { color: #A5B4FC; font-size: 12px; }
+            #miniMediaButton { background: rgba(15,23,42,0.3); border: 1px solid rgba(148,163,184,0.2); border-radius: 18px; color: #F8FAFC; }
+            #miniMediaButton:hover { background: rgba(96,165,250,0.18); }
+            #playbackSlider { background: transparent; }
+            #playbackSlider::groove:horizontal { border-radius: 8px; height: 8px; background: rgba(148,163,184,0.18); }
+            #playbackSlider::handle:horizontal { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #8B5CF6, stop:1 #10B981); border: none; width: 14px; height: 14px; border-radius: 7px; margin: -3px 0; }
             QLabel, QLineEdit, QListWidget, QPushButton, QComboBox { color: #E5EEF8; }
             QLineEdit, QListWidget, QComboBox { background: rgba(15, 23, 36, 0.9); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 10px; padding: 10px 12px; }
             QPushButton { background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 10px; padding: 10px 14px; }
@@ -519,6 +641,8 @@ class DhilipHomeWindow(QMainWindow):
             #sidebar { background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 20px; }
             #contentPanel { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 20px; }
             #topBar { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 16px; }
+            #mediaDock { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(79,70,229,0.12), stop:1 rgba(16,185,129,0.10)); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 18px; }
+            #videoPreview { background: rgba(15,23,42,0.96); border: 1px solid rgba(79,70,229,0.2); border-radius: 14px; }
             #brand { color: #0F172A; font-size: 25px; font-weight: 700; letter-spacing: 1.8px; }
             #sidebarSubtitle { color: #475569; font-size: 12px; margin-bottom: 8px; }
             #navButton { background: #EEF2FF; color: #0F172A; border: 1px solid rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 12px 14px; }
@@ -529,6 +653,13 @@ class DhilipHomeWindow(QMainWindow):
             #infoCard, #actionGroup { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 18px; }
             #cardTitle { color: #475569; font-size: 11px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; }
             #cardValue { color: #0F172A; font-size: 18px; }
+            #nowPlayingTitle { color: #0F172A; font-size: 16px; font-weight: 600; }
+            #mediaMeta { color: #4F46E5; font-size: 12px; }
+            #miniMediaButton { background: rgba(148,163,184,0.18); border: 1px solid rgba(99, 102, 241, 0.1); border-radius: 18px; color: #0F172A; }
+            #miniMediaButton:hover { background: rgba(79,70,229,0.16); }
+            #playbackSlider { background: transparent; }
+            #playbackSlider::groove:horizontal { border-radius: 8px; height: 8px; background: rgba(99,102,241,0.12); }
+            #playbackSlider::handle:horizontal { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4F46E5, stop:1 #10B981); border: none; width: 14px; height: 14px; border-radius: 7px; margin: -3px 0; }
             QLabel, QLineEdit, QListWidget, QPushButton, QComboBox { color: #0F172A; }
             QLineEdit, QListWidget, QComboBox { background: #F8FAFC; border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 10px; padding: 10px 12px; }
             QPushButton { background: #EEF2FF; border: 1px solid rgba(99, 102, 241, 0.12); border-radius: 10px; padding: 10px 14px; }
@@ -556,6 +687,17 @@ class DhilipHomeWindow(QMainWindow):
     def toggle_theme(self):
         new_theme = "light" if self.settings.get("theme", "dark") == "dark" else "dark"
         self.apply_theme(new_theme)
+
+    def scan_media_library(self):
+        try:
+            response = self.api.post("/api/media/scan")
+            if response.ok:
+                self.settings_message.setText("Media scan started")
+                self.load_media_catalog()
+            else:
+                self.settings_message.setText(f"Scan failed: {response.text}")
+        except Exception as exc:
+            self.settings_message.setText(f"Scan error: {exc}")
 
     def open_server_web(self):
         try:
@@ -732,6 +874,31 @@ class DhilipHomeWindow(QMainWindow):
         else:
             QMessageBox.information(self, "Media", "Select a media item to play.")
 
+    def _animate_media_dock(self, visible):
+        if not hasattr(self, "media_dock"):
+            return
+        self.media_dock.setVisible(True)
+        self.media_dock.raise_()
+        opacity = self.media_dock.graphicsEffect()
+        if opacity is None:
+            opacity = QGraphicsOpacityEffect(self.media_dock)
+            self.media_dock.setGraphicsEffect(opacity)
+        opacity.setOpacity(1.0 if visible else 0.0)
+        animation = QPropertyAnimation(self.media_dock, b"maximumHeight")
+        animation.setDuration(260)
+        animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        animation.setStartValue(self.media_dock.maximumHeight())
+        animation.setEndValue(180 if visible else 0)
+        animation.start()
+        if not visible:
+            QTimer.singleShot(270, self.media_dock.hide)
+
+    def seek_media(self, value):
+        if self.media_player.isSeekable():
+            duration = self.media_player.duration()
+            if duration > 0:
+                self.media_player.setPosition(int((value / 100) * duration))
+
     def open_media_item(self, item):
         payload = item.data(Qt.UserRole)
         if not payload:
@@ -746,8 +913,12 @@ class DhilipHomeWindow(QMainWindow):
             stream_url = f"{stream_url}?token={self.api.token}"
 
         self.media_player.setSource(QUrl(stream_url))
+        self.now_playing_label.setText(payload.get('filename', 'Media'))
+        self.media_meta_label.setText(f"Streaming from {self.settings['server_url']}")
+        self._animate_media_dock(True)
         self.media_player.play()
         self.status_badge.setText(f"Playing {payload.get('filename', 'media')}")
+        self.playback_slider.setValue(0)
 
     def load_download_items(self):
         try:
@@ -861,10 +1032,17 @@ class DhilipHomeWindow(QMainWindow):
         except Exception as exc:
             QMessageBox.warning(self, "Folder", str(exc))
 
+    def _apply_brand_splash(self):
+        self.setWindowTitle(APP_NAME)
+        self.setWindowIcon(make_app_icon(128))
+
 
 if __name__ == "__main__":
     threading.Thread(target=start_server, daemon=True).start()
     app = QApplication(sys.argv)
+    app.setWindowIcon(make_app_icon(128))
+    app.setApplicationName(APP_NAME)
+    app.setApplicationDisplayName(APP_NAME)
     window = DhilipHomeWindow()
     window.show()
     sys.exit(app.exec())
