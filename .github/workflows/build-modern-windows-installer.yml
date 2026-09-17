@@ -13,7 +13,7 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         shell: cmd
-        working-directory: dhilip-home-server-main
+        working-directory: Server/dhilip-home-server-main
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
@@ -21,7 +21,7 @@ jobs:
           python -m pip install pyinstaller
       - name: Build one-app EXE
         shell: cmd
-        working-directory: dhilip-home-server-main
+        working-directory: Server/dhilip-home-server-main
         run: |
           pyinstaller --clean --noconfirm windows-desktop\DhilipHome.spec
       - name: Install Inno Setup
@@ -29,11 +29,11 @@ jobs:
         run: choco install innosetup -y --no-progress
       - name: Build installer
         shell: cmd
-        working-directory: dhilip-home-server-main
+        working-directory: Server/dhilip-home-server-main
         run: |
           if not exist release mkdir release
           iscc installer\DhilipHome.iss
       - uses: actions/upload-artifact@v4
         with:
           name: DhilipHome-Modern-Installer
-          path: dhilip-home-server-main/release/DhilipHome-Setup-*.exe
+          path: Server/dhilip-home-server-main/release/DhilipHome-Setup-*.exe
