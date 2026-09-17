@@ -42,7 +42,7 @@ jobs:
         shell: cmd
         run: |
           if not exist release mkdir release
-          iscc dhilip-home-server-main\installer\DhilipHomeServer.iss
+          iscc installer\DhilipHomeServer.iss
 
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4

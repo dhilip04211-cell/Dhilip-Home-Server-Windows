@@ -3,8 +3,6 @@ from pathlib import Path
 
 from PyInstaller.utils.hooks import collect_submodules
 
-from pathlib import Path
-
 project_root = Path.cwd()
 hiddenimports = collect_submodules('app') + [
     'engineio.async_drivers.threading', 'simple_websocket'
