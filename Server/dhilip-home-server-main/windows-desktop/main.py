@@ -10,8 +10,11 @@ from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
 from PySide6.QtWidgets import (
     QApplication,
+    QComboBox,
     QFileDialog,
     QFrame,
+    QGridLayout,
+    QGroupBox,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -21,6 +24,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QSizePolicy,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -170,22 +174,27 @@ class DhilipHomeWindow(QMainWindow):
         self.setWindowTitle(APP_NAME)
         self.resize(1420, 860)
         self.setMinimumSize(1180, 720)
+        self.setWindowFlags(Qt.WindowType.Window)
 
         central = QWidget()
         root = QHBoxLayout(central)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
+        root.setContentsMargins(20, 20, 20, 20)
+        root.setSpacing(18)
 
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
-        sidebar.setFixedWidth(240)
+        sidebar.setFixedWidth(248)
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(20, 18, 20, 16)
+        sidebar_layout.setContentsMargins(20, 20, 20, 16)
         sidebar_layout.setSpacing(12)
 
         brand = QLabel("DHILIP HOME")
         brand.setObjectName("brand")
         sidebar_layout.addWidget(brand)
+
+        subtitle = QLabel("Smart home media hub")
+        subtitle.setObjectName("sidebarSubtitle")
+        sidebar_layout.addWidget(subtitle)
 
         nav_sections = [
             ("Home", "home"),
@@ -219,12 +228,44 @@ class DhilipHomeWindow(QMainWindow):
             sidebar_layout.addWidget(button)
 
         sidebar_layout.addStretch()
+
         self.status_badge = QLabel("Server starting")
         self.status_badge.setObjectName("statusBadge")
         sidebar_layout.addWidget(self.status_badge)
 
+        self.top_bar = QWidget()
+        self.top_bar.setObjectName("topBar")
+        top_bar_layout = QHBoxLayout(self.top_bar)
+        top_bar_layout.setContentsMargins(18, 12, 18, 12)
+        top_bar_layout.setSpacing(12)
+
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search files or media")
+        self.search_input.setClearButtonEnabled(True)
+        self.search_input.returnPressed.connect(self.quick_search)
+
+        self.refresh_button = QPushButton("Refresh")
+        self.refresh_button.clicked.connect(self.refresh_all)
+        self.theme_toggle_button = QPushButton("Toggle theme")
+        self.theme_toggle_button.clicked.connect(self.toggle_theme)
+        self.open_web_button = QPushButton("Open server")
+        self.open_web_button.clicked.connect(self.open_server_web)
+
+        top_bar_layout.addWidget(self.search_input, 1)
+        top_bar_layout.addWidget(self.refresh_button)
+        top_bar_layout.addWidget(self.theme_toggle_button)
+        top_bar_layout.addWidget(self.open_web_button)
+
+        content_panel = QWidget()
+        content_panel.setObjectName("contentPanel")
+        content_layout = QVBoxLayout(content_panel)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        content_layout.addWidget(self.top_bar)
+        content_layout.addWidget(self.nav, 1)
+
         root.addWidget(sidebar)
-        root.addWidget(self.nav, 1)
+        root.addWidget(content_panel, 1)
         self.setCentralWidget(central)
         self.apply_theme(self.settings.get("theme", "dark"))
 
@@ -246,21 +287,22 @@ class DhilipHomeWindow(QMainWindow):
     def _build_home_page(self):
         page, layout = self._panel("Home", "Real server status and local network overview")
         self.home_cards = QWidget()
-        card_layout = QHBoxLayout(self.home_cards)
+        card_layout = QGridLayout(self.home_cards)
         card_layout.setSpacing(18)
         card_layout.setContentsMargins(0, 0, 0, 0)
 
         self.home_card_labels = {}
-        for title, key in [
+        for index, (title, key) in enumerate([
             ("Server", "status"),
             ("Storage", "storage"),
             ("Downloads", "downloads"),
             ("Devices", "devices"),
             ("Media", "media"),
             ("Network", "network"),
-        ]:
+        ]):
             frame = QFrame()
             frame.setObjectName("infoCard")
+            frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
             frame_layout = QVBoxLayout(frame)
             frame_layout.setContentsMargins(18, 16, 18, 16)
             title_label = QLabel(title)
@@ -268,12 +310,33 @@ class DhilipHomeWindow(QMainWindow):
             value_label = QLabel("Unavailable")
             value_label.setObjectName("cardValue")
             value_label.setWordWrap(True)
+            value_label.setAlignment(Qt.AlignmentFlag.AlignTop)
             frame_layout.addWidget(title_label)
             frame_layout.addWidget(value_label)
             self.home_card_labels[key] = value_label
-            card_layout.addWidget(frame)
+            row = index // 3
+            col = index % 3
+            card_layout.addWidget(frame, row, col)
+
+        actions = QGroupBox("Quick actions")
+        actions.setObjectName("actionGroup")
+        actions_layout = QGridLayout(actions)
+        actions_layout.setSpacing(12)
+
+        action_specs = [
+            ("Refresh status", self.refresh_all),
+            ("Open server", self.open_server_web),
+            ("Toggle theme", self.toggle_theme),
+            ("Scan media", self.scan_media_library),
+        ]
+        for button_index, (label, callback) in enumerate(action_specs):
+            button = QPushButton(label)
+            button.setObjectName("accentButton")
+            button.clicked.connect(callback)
+            actions_layout.addWidget(button, button_index // 2, button_index % 2)
 
         layout.addWidget(self.home_cards)
+        layout.addWidget(actions)
         layout.addStretch()
         return page
 
@@ -288,10 +351,20 @@ class DhilipHomeWindow(QMainWindow):
         upload_button.clicked.connect(self.upload_file)
         folder_button = QPushButton("New Folder")
         folder_button.clicked.connect(self.create_folder)
+        refresh_button = QPushButton("Refresh")
+        refresh_button.clicked.connect(lambda: self.load_files(self.current_path or ""))
+        rename_button = QPushButton("Rename")
+        rename_button.clicked.connect(self.rename_selected_item)
+        delete_button = QPushButton("Delete")
+        delete_button.clicked.connect(self.delete_selected_item)
+
         toolbar.addWidget(self.path_input, 1)
         toolbar.addWidget(open_button)
         toolbar.addWidget(upload_button)
         toolbar.addWidget(folder_button)
+        toolbar.addWidget(refresh_button)
+        toolbar.addWidget(rename_button)
+        toolbar.addWidget(delete_button)
         layout.addLayout(toolbar)
 
         self.file_list = QListWidget()
@@ -301,6 +374,24 @@ class DhilipHomeWindow(QMainWindow):
 
     def _build_media_page(self):
         page, layout = self._panel("Media", "Your home media library and playback queue")
+
+        media_toolbar = QHBoxLayout()
+        self.media_search = QLineEdit()
+        self.media_search.setPlaceholderText("Search media library")
+        self.media_search.returnPressed.connect(self.search_media_library)
+        self.media_play_button = QPushButton("Play")
+        self.media_play_button.clicked.connect(self.play_selected_media)
+        self.media_pause_button = QPushButton("Pause")
+        self.media_pause_button.clicked.connect(self.media_player.pause)
+        self.media_stop_button = QPushButton("Stop")
+        self.media_stop_button.clicked.connect(self.media_player.stop)
+
+        media_toolbar.addWidget(self.media_search, 1)
+        media_toolbar.addWidget(self.media_play_button)
+        media_toolbar.addWidget(self.media_pause_button)
+        media_toolbar.addWidget(self.media_stop_button)
+        layout.addLayout(media_toolbar)
+
         self.media_list = QListWidget()
         self.media_list.itemDoubleClicked.connect(self.open_media_item)
         layout.addWidget(self.media_list, 1)
@@ -325,12 +416,17 @@ class DhilipHomeWindow(QMainWindow):
         self.cloud_destination.setPlaceholderText("Movies")
         self.cloud_submit = QPushButton("Start download")
         self.cloud_submit.clicked.connect(self.start_cloud_download)
+        self.cloud_refresh = QPushButton("Refresh downloads")
+        self.cloud_refresh.clicked.connect(lambda: self.load_download_items())
 
         form_layout.addWidget(QLabel("URL"))
         form_layout.addWidget(self.cloud_url)
         form_layout.addWidget(QLabel("Destination"))
         form_layout.addWidget(self.cloud_destination)
-        form_layout.addWidget(self.cloud_submit)
+        row = QHBoxLayout()
+        row.addWidget(self.cloud_submit)
+        row.addWidget(self.cloud_refresh)
+        form_layout.addLayout(row)
         form_layout.addStretch()
         layout.addWidget(form)
         return page
@@ -343,19 +439,50 @@ class DhilipHomeWindow(QMainWindow):
 
         self.server_url_input = QLineEdit(self.settings.get("server_url", f"http://127.0.0.1:{DEFAULT_PORT}"))
         self.server_url_input.setPlaceholderText("http://192.168.1.42:8080")
-        login_button = QPushButton("Connect")
-        login_button.clicked.connect(self.connect_to_server)
-        self.theme_combo = QLineEdit(self.settings.get("theme", "dark"))
+        connect_button = QPushButton("Connect")
+        connect_button.clicked.connect(self.connect_to_server)
+
+        self.username_input = QLineEdit()
+        self.username_input.setPlaceholderText("Username")
+        self.password_input = QLineEdit()
+        self.password_input.setPlaceholderText("Password")
+        self.password_input.setEchoMode(QLineEdit.Password)
+        login_button = QPushButton("Login")
+        login_button.clicked.connect(self.login_to_server)
+
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems(["dark", "light"])
+        self.theme_combo.setCurrentText(self.settings.get("theme", "dark"))
+        self.theme_combo.currentTextChanged.connect(self.apply_theme)
+
         self.settings_message = QLabel("Ready")
         self.settings_message.setObjectName("inlineMessage")
 
         row = QHBoxLayout()
         row.addWidget(self.server_url_input, 1)
-        row.addWidget(login_button)
+        row.addWidget(connect_button)
         settings_layout.addWidget(QLabel("Server URL"))
         settings_layout.addLayout(row)
+
+        credentials = QHBoxLayout()
+        credentials.addWidget(self.username_input, 1)
+        credentials.addWidget(self.password_input, 1)
+        settings_layout.addWidget(QLabel("Credentials"))
+        settings_layout.addLayout(credentials)
+        settings_layout.addWidget(login_button)
+
         settings_layout.addWidget(QLabel("Theme"))
         settings_layout.addWidget(self.theme_combo)
+
+        action_row = QHBoxLayout()
+        clear_auth_button = QPushButton("Clear auth token")
+        clear_auth_button.clicked.connect(self.clear_auth_token)
+        open_server_button = QPushButton("Open server")
+        open_server_button.clicked.connect(self.open_server_web)
+        action_row.addWidget(clear_auth_button)
+        action_row.addWidget(open_server_button)
+        settings_layout.addLayout(action_row)
+
         settings_layout.addWidget(self.settings_message)
         settings_layout.addStretch()
         layout.addWidget(settings_frame)
@@ -364,48 +491,93 @@ class DhilipHomeWindow(QMainWindow):
     def apply_theme(self, theme_name):
         theme = (theme_name or "dark").lower()
         dark_styles = """
-            QMainWindow { background: #0B0E14; color: #F4F7FB; }
-            #sidebar { background: #121722; border: 1px solid #273040; border-radius: 18px; }
-            #brand { color: #F4F7FB; font-size: 26px; font-weight: 700; letter-spacing: 1.2px; }
-            #navButton { background: #181F2C; color: #F4F7FB; border: 1px solid #273040; border-radius: 12px; padding: 12px 14px; text-align: left; }
-            #navButton:hover { background: #1F2940; }
-            #statusBadge { color: #35D07F; background: rgba(53, 208, 127, 0.12); border: 1px solid rgba(53, 208, 127, 0.25); border-radius: 10px; padding: 10px 12px; }
-            #pageTitle { font-size: 30px; font-weight: 650; color: #F4F7FB; }
-            #pageSubtitle { color: #9AA5B5; font-size: 14px; }
-            #infoCard { background: #121722; border: 1px solid #273040; border-radius: 16px; }
-            #cardTitle { color: #9AA5B5; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-            #cardValue { color: #F4F7FB; font-size: 18px; }
-            QLabel, QLineEdit, QListWidget, QPushButton { color: #F4F7FB; }
-            QLineEdit, QListWidget { background: #0F1724; border: 1px solid #273040; border-radius: 10px; padding: 10px 12px; }
-            QPushButton { background: #181F2C; border: 1px solid #273040; border-radius: 10px; padding: 10px 14px; }
-            QPushButton:hover { background: #1E2635; }
-            QListWidget::item { border-radius: 8px; padding: 10px; }
-            QListWidget::item:selected { background: #201E3D; }
-            #inlineMessage { color: #8B78FF; }
+            QMainWindow { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #0A0F1A, stop:1 #111827); color: #E5EEF8; }
+            #sidebar { background: rgba(17, 24, 39, 0.88); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 20px; }
+            #contentPanel { background: rgba(15, 23, 36, 0.80); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 20px; }
+            #topBar { background: rgba(15, 23, 36, 0.6); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 16px; }
+            #brand { color: #F8FAFC; font-size: 25px; font-weight: 700; letter-spacing: 1.8px; }
+            #sidebarSubtitle { color: #9AA9BC; font-size: 12px; margin-bottom: 8px; }
+            #navButton { background: rgba(148, 163, 184, 0.08); color: #EEF2FF; border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 12px; padding: 12px 14px; text-align: left; }
+            #navButton:hover { background: rgba(96, 165, 250, 0.18); border-color: rgba(96, 165, 250, 0.4); }
+            #statusBadge { color: #7DF0B2; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 12px; padding: 10px 12px; }
+            #pageTitle { font-size: 30px; font-weight: 650; color: #F8FAFC; }
+            #pageSubtitle { color: #9AA9BC; font-size: 13px; }
+            #infoCard, #actionGroup { background: rgba(15, 23, 36, 0.8); border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 18px; }
+            #cardTitle { color: #9AA9BC; font-size: 11px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; }
+            #cardValue { color: #F8FAFC; font-size: 18px; }
+            QLabel, QLineEdit, QListWidget, QPushButton, QComboBox { color: #E5EEF8; }
+            QLineEdit, QListWidget, QComboBox { background: rgba(15, 23, 36, 0.9); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 10px; padding: 10px 12px; }
+            QPushButton { background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 10px; padding: 10px 14px; }
+            QPushButton:hover { background: rgba(96, 165, 250, 0.18); }
+            #accentButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4F46E5, stop:1 #10B981); border: none; font-weight: 600; }
+            QListWidget::item { border-radius: 10px; padding: 10px; }
+            QListWidget::item:selected { background: rgba(79, 70, 229, 0.28); }
+            #inlineMessage { color: #A5B4FC; }
         """
         light_styles = """
-            QMainWindow { background: #F2F5FA; color: #111827; }
-            #sidebar { background: #FFFFFF; border: 1px solid #D9E2F0; border-radius: 18px; }
-            #brand { color: #1F2937; font-size: 26px; font-weight: 700; letter-spacing: 1.2px; }
-            #navButton { background: #EEF4FF; color: #1F2937; border: 1px solid #D9E2F0; border-radius: 12px; padding: 12px 14px; }
-            #navButton:hover { background: #E2EBFF; }
-            #statusBadge { color: #0C8C5D; background: rgba(53, 208, 127, 0.10); border: 1px solid rgba(53, 208, 127, 0.25); border-radius: 10px; padding: 10px 12px; }
-            #pageTitle { font-size: 30px; font-weight: 650; color: #111827; }
-            #pageSubtitle { color: #58657A; font-size: 14px; }
-            #infoCard { background: #FFFFFF; border: 1px solid #D9E2F0; border-radius: 16px; }
-            #cardTitle { color: #58657A; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-            #cardValue { color: #111827; font-size: 18px; }
-            QLabel, QLineEdit, QListWidget, QPushButton { color: #111827; }
-            QLineEdit, QListWidget { background: #F9FAFC; border: 1px solid #D9E2F0; border-radius: 10px; padding: 10px 12px; }
-            QPushButton { background: #EEF4FF; border: 1px solid #D9E2F0; border-radius: 10px; padding: 10px 14px; }
-            QPushButton:hover { background: #E3ECFF; }
-            QListWidget::item { border-radius: 8px; padding: 10px; }
-            QListWidget::item:selected { background: #DDE8FF; }
+            QMainWindow { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F3F6FB, stop:1 #E5EEF8); color: #0F172A; }
+            #sidebar { background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 20px; }
+            #contentPanel { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 20px; }
+            #topBar { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 16px; }
+            #brand { color: #0F172A; font-size: 25px; font-weight: 700; letter-spacing: 1.8px; }
+            #sidebarSubtitle { color: #475569; font-size: 12px; margin-bottom: 8px; }
+            #navButton { background: #EEF2FF; color: #0F172A; border: 1px solid rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 12px 14px; }
+            #navButton:hover { background: #E2E8F0; }
+            #statusBadge { color: #0C8C5D; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.22); border-radius: 12px; padding: 10px 12px; }
+            #pageTitle { font-size: 30px; font-weight: 650; color: #0F172A; }
+            #pageSubtitle { color: #475569; font-size: 13px; }
+            #infoCard, #actionGroup { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 18px; }
+            #cardTitle { color: #475569; font-size: 11px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; }
+            #cardValue { color: #0F172A; font-size: 18px; }
+            QLabel, QLineEdit, QListWidget, QPushButton, QComboBox { color: #0F172A; }
+            QLineEdit, QListWidget, QComboBox { background: #F8FAFC; border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 10px; padding: 10px 12px; }
+            QPushButton { background: #EEF2FF; border: 1px solid rgba(99, 102, 241, 0.12); border-radius: 10px; padding: 10px 14px; }
+            QPushButton:hover { background: #E2E8F0; }
+            #accentButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4F46E5, stop:1 #10B981); border: none; color: white; font-weight: 600; }
+            QListWidget::item { border-radius: 10px; padding: 10px; }
+            QListWidget::item:selected { background: rgba(79, 70, 229, 0.18); }
             #inlineMessage { color: #4F46E5; }
         """
         self.setStyleSheet(dark_styles if theme == "dark" else light_styles)
         self.settings["theme"] = theme
+        if hasattr(self, "theme_combo") and self.theme_combo.currentText() != theme:
+            self.theme_combo.setCurrentText(theme)
         SettingsStore.save(self.settings)
+
+    def refresh_all(self):
+        self.refresh_server_state()
+        if self.nav.currentIndex() == self.nav_index["files"]:
+            self.load_files(self.current_path or "")
+        if self.nav.currentIndex() == self.nav_index["media"]:
+            self.load_media_catalog()
+        if self.nav.currentIndex() == self.nav_index["downloads"]:
+            self.load_download_items()
+
+    def toggle_theme(self):
+        new_theme = "light" if self.settings.get("theme", "dark") == "dark" else "dark"
+        self.apply_theme(new_theme)
+
+    def open_server_web(self):
+        try:
+            import webbrowser
+            webbrowser.open(self.settings.get("server_url", f"http://127.0.0.1:{DEFAULT_PORT}"))
+        except Exception:
+            QMessageBox.information(self, "Open server", "Open the server URL manually in your browser.")
+
+    def quick_search(self):
+        query = self.search_input.text().strip()
+        if not query:
+            self.refresh_all()
+            return
+        current_index = self.nav.currentIndex()
+        if current_index == self.nav_index["files"]:
+            self.load_files(self.current_path or "")
+            self.file_list.clear()
+            self.file_list.addItem(f"Search for '{query}' is available through the server API.")
+        elif current_index == self.nav_index["media"]:
+            self.search_media_library(query)
+        else:
+            self.settings_message.setText(f"Search: {query}")
 
     def refresh_server_state(self):
         try:
@@ -417,7 +589,7 @@ class DhilipHomeWindow(QMainWindow):
                 self.status_badge.setStyleSheet("color: #35D07F; background: rgba(53, 208, 127, 0.12); border: 1px solid rgba(53, 208, 127, 0.25); border-radius: 10px; padding: 10px 12px;")
                 self._update_home_cards(status)
                 if self.nav.currentIndex() == self.nav_index["files"]:
-                    self.load_files()
+                    self.load_files(self.current_path or "")
                 if self.nav.currentIndex() == self.nav_index["media"]:
                     self.load_media_catalog()
                 if self.nav.currentIndex() == self.nav_index["downloads"]:
@@ -460,6 +632,24 @@ class DhilipHomeWindow(QMainWindow):
         SettingsStore.save(self.settings)
         self.settings_message.setText("Connected to server")
         self.refresh_server_state()
+
+    def login_to_server(self):
+        username = self.username_input.text().strip()
+        password = self.password_input.text().strip()
+        if not username or not password:
+            self.settings_message.setText("Enter username and password")
+            return
+        ok, message = self.api.login(username, password)
+        if ok:
+            self.settings_message.setText("Authentication successful")
+            self.refresh_server_state()
+        else:
+            self.settings_message.setText(f"Login failed: {message}")
+
+    def clear_auth_token(self):
+        AuthManager().clear()
+        self.api.token = None
+        self.settings_message.setText("Authentication cleared")
 
     def load_files(self, path=""):
         if not path:
@@ -505,13 +695,42 @@ class DhilipHomeWindow(QMainWindow):
                 return
             payload = response.json().get("data", response.json())
             self.media_list.clear()
-            for item in payload.get("items", []):
+            items = payload.get("items", []) if isinstance(payload, dict) else payload
+            for item in items:
                 row = QListWidgetItem(f"{item.get('filename', 'Unknown')} ({item.get('category', 'Other')})")
                 row.setData(Qt.UserRole, item)
                 self.media_list.addItem(row)
         except Exception:
             self.media_list.clear()
             self.media_list.addItem("Unable to load media catalog")
+
+    def search_media_library(self, query=None):
+        query = (query or self.media_search.text()).strip()
+        if not query:
+            self.load_media_catalog()
+            return
+        try:
+            response = self.api.get("/api/media/search", params={"q": query})
+            if not response.ok:
+                self.media_list.clear()
+                self.media_list.addItem("No media matches were found")
+                return
+            payload = response.json().get("data", response.json())
+            self.media_list.clear()
+            for item in payload.get("items", []):
+                row = QListWidgetItem(f"{item.get('filename', 'Unknown')} ({item.get('category', 'Other')})")
+                row.setData(Qt.UserRole, item)
+                self.media_list.addItem(row)
+        except Exception:
+            self.media_list.clear()
+            self.media_list.addItem("Unable to search media catalog")
+
+    def play_selected_media(self):
+        selected_item = self.media_list.currentItem()
+        if selected_item is not None:
+            self.open_media_item(selected_item)
+        else:
+            QMessageBox.information(self, "Media", "Select a media item to play.")
 
     def open_media_item(self, item):
         payload = item.data(Qt.UserRole)
@@ -568,6 +787,48 @@ class DhilipHomeWindow(QMainWindow):
             self.download_list.addItem("Download queued on the server")
         except Exception as exc:
             QMessageBox.warning(self, "Cloud download", str(exc))
+
+    def rename_selected_item(self):
+        current = self.file_list.currentItem()
+        if current is None:
+            QMessageBox.information(self, "Rename", "Select a file or folder to rename.")
+            return
+        payload = current.data(Qt.UserRole) or {}
+        path = payload.get("path")
+        if not path:
+            return
+        new_name, ok = QInputDialog.getText(self, "Rename", "New name")
+        if not ok or not new_name.strip():
+            return
+        try:
+            response = self.api.post("/api/files/rename", json={"path": path, "new_name": new_name.strip()})
+            if not response.ok:
+                QMessageBox.warning(self, "Rename", response.text)
+                return
+            self.load_files(self.current_path)
+        except Exception as exc:
+            QMessageBox.warning(self, "Rename", str(exc))
+
+    def delete_selected_item(self):
+        current = self.file_list.currentItem()
+        if current is None:
+            QMessageBox.information(self, "Delete", "Select an item to delete.")
+            return
+        payload = current.data(Qt.UserRole) or {}
+        path = payload.get("path")
+        if not path:
+            return
+        confirm = QMessageBox.question(self, "Delete item", f"Remove '{path}' from the server?", QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if confirm != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            response = self.api.delete("/api/files", params={"path": path})
+            if not response.ok:
+                QMessageBox.warning(self, "Delete", response.text)
+                return
+            self.load_files(self.current_path)
+        except Exception as exc:
+            QMessageBox.warning(self, "Delete", str(exc))
 
     def upload_file(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Select file to upload")
