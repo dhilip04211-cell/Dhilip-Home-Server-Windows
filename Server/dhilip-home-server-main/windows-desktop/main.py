@@ -6,7 +6,7 @@ from pathlib import Path
 
 import requests
 from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, QUrl
-from PySide6.QtGui import QBrush, QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtGui import QBrush, QColor, QIcon, QLinearGradient, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
@@ -66,11 +66,11 @@ def make_app_icon(size=256):
     painter.setBrush(QBrush(QColor(18, 24, 38, 210)))
     painter.drawRoundedRect(28, 28, size - 56, size - 56, 42, 42)
 
-    grad = painter.createLinearGradient(0, 0, size, size)
+    grad = QLinearGradient(0, 0, size, size)
     grad.setColorAt(0.0, purple)
     grad.setColorAt(0.5, QColor(59, 130, 246))
     grad.setColorAt(1.0, mint)
-    painter.setBrush(grad)
+    painter.setBrush(QBrush(grad))
     painter.drawRoundedRect(42, 42, size - 84, size - 84, 34, 34)
 
     reflection = QColor(255, 255, 255, 110)
