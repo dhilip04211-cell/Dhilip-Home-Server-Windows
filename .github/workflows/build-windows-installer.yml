@@ -1,0 +1,50 @@
+name: Build Dhilip Home Server Installer
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python dependencies
+        shell: cmd
+        run: |
+          python -m pip install --upgrade pip
+          if exist requirements.txt python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+
+      - name: Build standalone EXE
+        shell: cmd
+        run: call windows\build_windows.bat
+
+      - name: Install Inno Setup
+        shell: powershell
+        run: choco install innosetup -y --no-progress
+
+      - name: Build installer
+        shell: cmd
+        run: iscc installer\DhilipHomeServer.iss
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: DhilipHomeServer-Windows-Installer
+          path: release\DhilipHomeServer-Setup-*.exe
+
+      - name: Upload standalone EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: DhilipHomeServer-Standalone-EXE
+          path: dist\DhilipHomeServer.exe

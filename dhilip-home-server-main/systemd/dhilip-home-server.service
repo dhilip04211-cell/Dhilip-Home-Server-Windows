@@ -1,0 +1,24 @@
+[Unit]
+Description=DhilipHome Server - Private Home Media Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__DHILIPHOME_USER__
+WorkingDirectory=__DHILIPHOME_DIR__
+EnvironmentFile=__DHILIPHOME_DIR__/.env
+ExecStart=__DHILIPHOME_DIR__/venv/bin/python __DHILIPHOME_DIR__/server.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=__DHILIPHOME_DIR__/data __DHILIPHOME_DIR__/media __DHILIPHOME_DIR__/logs
+LimitNOFILE=65535
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dhiliphome-server
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,33 @@
+[Unit]
+Description=DhilipHome Server - Private Home Server Backend
+After=network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Dedicated non-root user (change to your Debian username e.g. dhilip or leave as current user)
+User=root
+WorkingDirectory=/opt/dhilip-home-server
+EnvironmentFile=-/opt/dhilip-home-server/.env
+ExecStart=/opt/dhilip-home-server/venv/bin/python /opt/dhilip-home-server/server.py
+
+# Auto restart on failure or unexpected exit
+Restart=always
+RestartSec=5
+
+# Sandboxing and security hardening
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/opt/dhilip-home-server/data /opt/dhilip-home-server/media /opt/dhilip-home-server/logs /opt/dhilip-home-server/config
+NoNewPrivileges=true
+
+# Resource limits
+LimitNOFILE=65535
+
+# Logging to journald and file
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dhiliphome-server
+
+[Install]
+WantedBy=multi-user.target

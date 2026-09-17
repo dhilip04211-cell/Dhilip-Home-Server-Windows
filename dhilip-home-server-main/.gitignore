@@ -1,0 +1,39 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# SQLite Database & Storage
+data/*.db
+data/*.sqlite
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+logs/*.log
+*.pid
+
+# Media runtime files (keep gitkeep)
+media/*
+!media/.gitkeep
+data/*
+!data/.gitkeep
+logs/*
+!logs/.gitkeep
+config/*
+!config/.gitkeep

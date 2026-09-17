@@ -1,0 +1,11 @@
+# DhilipHome Server — Requirements
+# Compatible with Debian 11/12 (Bullseye/Bookworm), Ubuntu 20.04+, and Python 3.9-3.12
+
+Flask>=3.0.0,<4.0.0
+Flask-Cors>=4.0.0,<5.0.0
+Flask-SocketIO>=5.3.6,<6.0.0
+python-dotenv>=1.0.1,<2.0.0
+psutil>=5.9.8,<6.0.0
+gunicorn>=21.2.0,<23.0.0
+simple-websocket>=1.0.0
+Werkzeug>=3.0.1,<4.0.0

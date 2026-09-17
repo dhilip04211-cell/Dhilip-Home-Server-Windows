@@ -1,0 +1,6 @@
+{
+  "name": "DhilipHome Server",
+  "description": "Production-ready private home backend server for Debian and DhilipHome Android client with system monitoring, media streaming, file management, and REST/WebSocket APIs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
