@@ -8,7 +8,7 @@ type FileItem = { name: string; path: string; is_dir: boolean; size_human?: stri
 type DownloadTask = { task_id: string; url: string; filename: string; destination: string; status: string; progress_percent: number; downloaded_bytes: number; total_bytes: number; error?: string };
 type Metrics = { cpu: { usage_percent: number; physical_cores: number; load_average?: { '1min': number } }; memory: { usage_percent: number; used_human: string; total_human: string; free_human: string }; uptime: { server_uptime_human: string }; operating_system: { hostname: string; distribution: string } };
 
-const API_BASE = 'http://localhost:8080';
+const API_BASE = (import.meta.env.VITE_API_BASE || (window.location.hostname === 'localhost' ? 'http://localhost:8080' : window.location.origin)).replace(/\/$/, '');
 const TOKEN_KEY = 'dhiliphome_token';
 
 function useApi(token: string) {
