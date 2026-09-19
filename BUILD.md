@@ -22,3 +22,14 @@ pyinstaller --clean --noconfirm windows-desktop\DhilipHome.spec
 ```
 
 The build output will generate the main executable in the `dist` folder, and the installer workflow packages the release artifact for distribution.
+
+## Android release signing
+
+The Android release build uses `Android/Home-Server-main/my-upload-key.jks` by default. Generate it once from the repository root with:
+
+```bash
+keytool -genkeypair -v -keystore Android/Home-Server-main/my-upload-key.jks \
+	-alias upload -keyalg RSA -keysize 2048 -validity 10000
+```
+
+Keep the keystore and its passwords private. Set `KEYSTORE_PATH`, `STORE_PASSWORD`, and `KEY_PASSWORD` before running `./gradlew assembleRelease`.

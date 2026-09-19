@@ -23,7 +23,7 @@ enum class ThemeMode {
 }
 
 object ThemeController {
-    var currentThemeMode by mutableStateOf(ThemeMode.DARK)
+    var currentThemeMode by mutableStateOf(ThemeMode.LIGHT)
 }
 
 val LocalThemeController = compositionLocalOf { ThemeController }

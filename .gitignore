@@ -1,0 +1,5 @@
+Android/Home-Server-main/my-upload-key.jks
+Android/Home-Server-main/*.keystore
+Android/Home-Server-main/my-upload-key.password
+Android/Home-Server-main/.gradle/
+Android/Home-Server-main/build/
