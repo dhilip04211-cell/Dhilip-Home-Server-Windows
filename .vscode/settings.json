@@ -1,0 +1,10 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "npm run lint": true,
+        "npm run build": true,
+        "/^cd /workspaces/Dhilip-Home-Server-Windows/Server/dhilip-home-server-main && python3 -m py_compile windows-desktop/main\\.py && npm run lint && npm run build$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

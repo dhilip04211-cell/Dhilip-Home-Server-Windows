@@ -116,16 +116,17 @@ class SettingsStore:
     @staticmethod
     def load():
         if not SETTINGS_PATH.exists():
-            return {"server_url": f"http://127.0.0.1:{DEFAULT_PORT}", "theme": "dark"}
+            return {"server_url": f"http://127.0.0.1:{DEFAULT_PORT}", "theme": "dark", "start_local_server": True}
         try:
             with SETTINGS_PATH.open("r", encoding="utf-8") as handle:
                 data = json.load(handle)
                 return {
                     "server_url": data.get("server_url", f"http://127.0.0.1:{DEFAULT_PORT}"),
                     "theme": data.get("theme", "dark"),
+                        "start_local_server": bool(data.get("start_local_server", True)),
                 }
         except Exception:
-            return {"server_url": f"http://127.0.0.1:{DEFAULT_PORT}", "theme": "dark"}
+                    return {"server_url": f"http://127.0.0.1:{DEFAULT_PORT}", "theme": "dark", "start_local_server": True}
 
     @staticmethod
     def save(data):
@@ -552,8 +553,16 @@ class DhilipHomeWindow(QMainWindow):
 
         self.server_url_input = QLineEdit(self.settings.get("server_url", f"http://127.0.0.1:{DEFAULT_PORT}"))
         self.server_url_input.setPlaceholderText("http://192.168.1.42:8080")
+        self.server_url_input.returnPressed.connect(self.connect_to_server)
         connect_button = QPushButton("Connect")
         connect_button.clicked.connect(self.connect_to_server)
+        test_button = QPushButton("Test")
+        test_button.clicked.connect(self.test_server_connection)
+
+        self.local_server_toggle = QPushButton("Local server: ON")
+        self.local_server_toggle.setCheckable(True)
+        self.local_server_toggle.setChecked(self.settings.get("start_local_server", True))
+        self.local_server_toggle.clicked.connect(self.toggle_local_server)
 
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("Username")
@@ -573,9 +582,11 @@ class DhilipHomeWindow(QMainWindow):
 
         row = QHBoxLayout()
         row.addWidget(self.server_url_input, 1)
+        row.addWidget(test_button)
         row.addWidget(connect_button)
         settings_layout.addWidget(QLabel("Server URL"))
         settings_layout.addLayout(row)
+        settings_layout.addWidget(self.local_server_toggle)
 
         credentials = QHBoxLayout()
         credentials.addWidget(self.username_input, 1)
@@ -604,70 +615,191 @@ class DhilipHomeWindow(QMainWindow):
     def apply_theme(self, theme_name):
         theme = (theme_name or "dark").lower()
         dark_styles = """
-            QMainWindow { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #0A0F1A, stop:1 #111827); color: #E5EEF8; }
-            #sidebar { background: rgba(17, 24, 39, 0.88); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 20px; }
-            #contentPanel { background: rgba(15, 23, 36, 0.80); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 20px; }
-            #topBar { background: rgba(15, 23, 36, 0.6); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 16px; }
-            #mediaDock { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(79,70,229,0.22), stop:1 rgba(16,185,129,0.16)); border: 1px solid rgba(148, 163, 184, 0.16); border-radius: 18px; }
-            #videoPreview { background: rgba(2,6,23,0.9); border: 1px solid rgba(96,165,250,0.25); border-radius: 14px; }
-            #brand { color: #F8FAFC; font-size: 25px; font-weight: 700; letter-spacing: 1.8px; }
-            #sidebarSubtitle { color: #9AA9BC; font-size: 12px; margin-bottom: 8px; }
-            #navButton { background: rgba(148, 163, 184, 0.08); color: #EEF2FF; border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 12px; padding: 12px 14px; text-align: left; }
-            #navButton:hover { background: rgba(96, 165, 250, 0.18); border-color: rgba(96, 165, 250, 0.4); }
-            #statusBadge { color: #7DF0B2; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); border-radius: 12px; padding: 10px 12px; }
-            #pageTitle { font-size: 30px; font-weight: 650; color: #F8FAFC; }
-            #pageSubtitle { color: #9AA9BC; font-size: 13px; }
-            #infoCard, #actionGroup { background: rgba(15, 23, 36, 0.8); border: 1px solid rgba(148, 163, 184, 0.14); border-radius: 18px; }
-            #cardTitle { color: #9AA9BC; font-size: 11px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; }
-            #cardValue { color: #F8FAFC; font-size: 18px; }
-            #nowPlayingTitle { color: #F8FAFC; font-size: 16px; font-weight: 600; }
-            #mediaMeta { color: #A5B4FC; font-size: 12px; }
-            #miniMediaButton { background: rgba(15,23,42,0.3); border: 1px solid rgba(148,163,184,0.2); border-radius: 18px; color: #F8FAFC; }
+            QMainWindow {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #090d18, stop:0.4 #101827, stop:1 #0f172a);
+                color: #edf2ff;
+            }
+            QWidget { font-family: 'Segoe UI', sans-serif; }
+            #sidebar {
+                background: rgba(15, 23, 42, 0.9);
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                border-radius: 26px;
+                box-shadow: 0 14px 30px rgba(15, 23, 42, 0.45);
+            }
+            #contentPanel {
+                background: rgba(15, 23, 42, 0.82);
+                border: 1px solid rgba(148, 163, 184, 0.12);
+                border-radius: 26px;
+                box-shadow: 0 14px 30px rgba(15, 23, 42, 0.35);
+            }
+            #topBar {
+                background: rgba(15, 23, 36, 0.75);
+                border: 1px solid rgba(148, 163, 184, 0.12);
+                border-radius: 18px;
+            }
+            #mediaDock {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 rgba(79,70,229,0.24), stop:1 rgba(16,185,129,0.18));
+                border: 1px solid rgba(96, 165, 250, 0.24);
+                border-radius: 20px;
+            }
+            #videoPreview {
+                background: rgba(2,6,23,0.92);
+                border: 1px solid rgba(96,165,250,0.25);
+                border-radius: 14px;
+            }
+            #brand {
+                color: #f8fafc;
+                font-size: 25px;
+                font-weight: 700;
+                letter-spacing: 1.8px;
+            }
+            #sidebarSubtitle {
+                color: #9aa9bc;
+                font-size: 12px;
+                margin-bottom: 8px;
+            }
+            #navButton {
+                background: rgba(148, 163, 184, 0.08);
+                color: #eef2ff;
+                border: 1px solid rgba(148, 163, 184, 0.12);
+                border-radius: 14px;
+                padding: 12px 14px;
+                text-align: left;
+                font-weight: 600;
+            }
+            #navButton:hover {
+                background: rgba(96, 165, 250, 0.18);
+                border-color: rgba(96, 165, 250, 0.4);
+            }
+            #statusBadge {
+                color: #7df0b2;
+                background: rgba(34, 197, 94, 0.12);
+                border: 1px solid rgba(34, 197, 94, 0.25);
+                border-radius: 12px;
+                padding: 10px 12px;
+                font-weight: 600;
+            }
+            #pageTitle { font-size: 30px; font-weight: 700; color: #f8fafc; }
+            #pageSubtitle { color: #9aa9bc; font-size: 13px; }
+            #infoCard, #actionGroup {
+                background: rgba(15, 23, 36, 0.82);
+                border: 1px solid rgba(148, 163, 184, 0.14);
+                border-radius: 20px;
+            }
+            #cardTitle {
+                color: #9aa9bc; font-size: 11px; font-weight: 600;
+                letter-spacing: 1.3px; text-transform: uppercase;
+            }
+            #cardValue { color: #f8fafc; font-size: 18px; }
+            #nowPlayingTitle { color: #f8fafc; font-size: 16px; font-weight: 600; }
+            #mediaMeta { color: #a5b4fc; font-size: 12px; }
+            #miniMediaButton {
+                background: rgba(15, 23, 42, 0.35);
+                border: 1px solid rgba(148,163,184,0.2);
+                border-radius: 18px;
+                color: #f8fafc;
+            }
             #miniMediaButton:hover { background: rgba(96,165,250,0.18); }
             #playbackSlider { background: transparent; }
-            #playbackSlider::groove:horizontal { border-radius: 8px; height: 8px; background: rgba(148,163,184,0.18); }
-            #playbackSlider::handle:horizontal { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #8B5CF6, stop:1 #10B981); border: none; width: 14px; height: 14px; border-radius: 7px; margin: -3px 0; }
-            QLabel, QLineEdit, QListWidget, QPushButton, QComboBox { color: #E5EEF8; }
-            QLineEdit, QListWidget, QComboBox { background: rgba(15, 23, 36, 0.9); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 10px; padding: 10px 12px; }
-            QPushButton { background: rgba(148, 163, 184, 0.08); border: 1px solid rgba(148, 163, 184, 0.18); border-radius: 10px; padding: 10px 14px; }
+            #playbackSlider::groove:horizontal {
+                border-radius: 8px; height: 8px; background: rgba(148,163,184,0.18);
+            }
+            #playbackSlider::handle:horizontal {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #8b5cf6, stop:1 #10b981);
+                border: none; width: 14px; height: 14px; border-radius: 7px; margin: -3px 0;
+            }
+            QLabel, QLineEdit, QListWidget, QPushButton, QComboBox { color: #edf2ff; }
+            QLineEdit, QListWidget, QComboBox {
+                background: rgba(15, 23, 36, 0.9);
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                border-radius: 12px;
+                padding: 10px 12px;
+            }
+            QPushButton {
+                background: rgba(148, 163, 184, 0.08);
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                border-radius: 12px;
+                padding: 10px 14px;
+                font-weight: 600;
+            }
             QPushButton:hover { background: rgba(96, 165, 250, 0.18); }
-            #accentButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4F46E5, stop:1 #10B981); border: none; font-weight: 600; }
-            QListWidget::item { border-radius: 10px; padding: 10px; }
+            #accentButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #4f46e5, stop:1 #10b981);
+                border: none;
+                font-weight: 700;
+            }
+            QListWidget::item { border-radius: 12px; padding: 10px; }
             QListWidget::item:selected { background: rgba(79, 70, 229, 0.28); }
-            #inlineMessage { color: #A5B4FC; }
+            #inlineMessage { color: #a5b4fc; }
         """
         light_styles = """
-            QMainWindow { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #F3F6FB, stop:1 #E5EEF8); color: #0F172A; }
-            #sidebar { background: rgba(255, 255, 255, 0.85); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 20px; }
-            #contentPanel { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(148, 163, 184, 0.15); border-radius: 20px; }
-            #topBar { background: rgba(255, 255, 255, 0.7); border: 1px solid rgba(148, 163, 184, 0.12); border-radius: 16px; }
-            #mediaDock { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(79,70,229,0.12), stop:1 rgba(16,185,129,0.10)); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 18px; }
-            #videoPreview { background: rgba(15,23,42,0.96); border: 1px solid rgba(79,70,229,0.2); border-radius: 14px; }
-            #brand { color: #0F172A; font-size: 25px; font-weight: 700; letter-spacing: 1.8px; }
+            QMainWindow {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                    stop:0 #f3f6fb, stop:1 #e5eef8);
+                color: #0f172a;
+            }
+            QWidget { font-family: 'Segoe UI', sans-serif; }
+            #sidebar {
+                background: rgba(255, 255, 255, 0.88);
+                border: 1px solid rgba(148, 163, 184, 0.18);
+                border-radius: 26px;
+                box-shadow: 0 12px 28px rgba(148, 163, 184, 0.25);
+            }
+            #contentPanel {
+                background: rgba(255, 255, 255, 0.78);
+                border: 1px solid rgba(148, 163, 184, 0.15);
+                border-radius: 26px;
+                box-shadow: 0 12px 28px rgba(148, 163, 184, 0.2);
+            }
+            #topBar {
+                background: rgba(255, 255, 255, 0.78);
+                border: 1px solid rgba(148, 163, 184, 0.12);
+                border-radius: 18px;
+            }
+            #mediaDock {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 rgba(79,70,229,0.12), stop:1 rgba(16,185,129,0.10));
+                border: 1px solid rgba(99, 102, 241, 0.18);
+                border-radius: 20px;
+            }
+            #videoPreview {
+                background: rgba(15,23,42,0.96);
+                border: 1px solid rgba(79,70,229,0.2);
+                border-radius: 14px;
+            }
+            #brand { color: #0f172a; font-size: 25px; font-weight: 700; letter-spacing: 1.8px; }
             #sidebarSubtitle { color: #475569; font-size: 12px; margin-bottom: 8px; }
-            #navButton { background: #EEF2FF; color: #0F172A; border: 1px solid rgba(99, 102, 241, 0.1); border-radius: 12px; padding: 12px 14px; }
-            #navButton:hover { background: #E2E8F0; }
-            #statusBadge { color: #0C8C5D; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.22); border-radius: 12px; padding: 10px 12px; }
-            #pageTitle { font-size: 30px; font-weight: 650; color: #0F172A; }
+            #navButton { background: #eef2ff; color: #0f172a; border: 1px solid rgba(99, 102, 241, 0.1); border-radius: 14px; padding: 12px 14px; font-weight: 600; }
+            #navButton:hover { background: #e2e8f0; }
+            #statusBadge { color: #0c8c5d; background: rgba(34, 197, 94, 0.08); border: 1px solid rgba(34, 197, 94, 0.22); border-radius: 12px; padding: 10px 12px; font-weight: 600; }
+            #pageTitle { font-size: 30px; font-weight: 700; color: #0f172a; }
             #pageSubtitle { color: #475569; font-size: 13px; }
-            #infoCard, #actionGroup { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 18px; }
+            #infoCard, #actionGroup {
+                background: rgba(255, 255, 255, 0.9);
+                border: 1px solid rgba(148, 163, 184, 0.2);
+                border-radius: 20px;
+            }
             #cardTitle { color: #475569; font-size: 11px; font-weight: 600; letter-spacing: 1.3px; text-transform: uppercase; }
-            #cardValue { color: #0F172A; font-size: 18px; }
-            #nowPlayingTitle { color: #0F172A; font-size: 16px; font-weight: 600; }
-            #mediaMeta { color: #4F46E5; font-size: 12px; }
-            #miniMediaButton { background: rgba(148,163,184,0.18); border: 1px solid rgba(99, 102, 241, 0.1); border-radius: 18px; color: #0F172A; }
+            #cardValue { color: #0f172a; font-size: 18px; }
+            #nowPlayingTitle { color: #0f172a; font-size: 16px; font-weight: 600; }
+            #mediaMeta { color: #4f46e5; font-size: 12px; }
+            #miniMediaButton { background: rgba(148,163,184,0.18); border: 1px solid rgba(99, 102, 241, 0.1); border-radius: 18px; color: #0f172a; }
             #miniMediaButton:hover { background: rgba(79,70,229,0.16); }
             #playbackSlider { background: transparent; }
             #playbackSlider::groove:horizontal { border-radius: 8px; height: 8px; background: rgba(99,102,241,0.12); }
-            #playbackSlider::handle:horizontal { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4F46E5, stop:1 #10B981); border: none; width: 14px; height: 14px; border-radius: 7px; margin: -3px 0; }
-            QLabel, QLineEdit, QListWidget, QPushButton, QComboBox { color: #0F172A; }
-            QLineEdit, QListWidget, QComboBox { background: #F8FAFC; border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 10px; padding: 10px 12px; }
-            QPushButton { background: #EEF2FF; border: 1px solid rgba(99, 102, 241, 0.12); border-radius: 10px; padding: 10px 14px; }
-            QPushButton:hover { background: #E2E8F0; }
-            #accentButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4F46E5, stop:1 #10B981); border: none; color: white; font-weight: 600; }
-            QListWidget::item { border-radius: 10px; padding: 10px; }
+            #playbackSlider::handle:horizontal { background: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4f46e5, stop:1 #10b981); border: none; width: 14px; height: 14px; border-radius: 7px; margin: -3px 0; }
+            QLabel, QLineEdit, QListWidget, QPushButton, QComboBox { color: #0f172a; }
+            QLineEdit, QListWidget, QComboBox { background: #f8fafc; border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 12px; padding: 10px 12px; }
+            QPushButton { background: #eef2ff; border: 1px solid rgba(99, 102, 241, 0.12); border-radius: 12px; padding: 10px 14px; font-weight: 600; }
+            QPushButton:hover { background: #e2e8f0; }
+            #accentButton { background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #4f46e5, stop:1 #10b981); border: none; color: white; font-weight: 700; }
+            QListWidget::item { border-radius: 12px; padding: 10px; }
             QListWidget::item:selected { background: rgba(79, 70, 229, 0.18); }
-            #inlineMessage { color: #4F46E5; }
+            #inlineMessage { color: #4f46e5; }
         """
         self.setStyleSheet(dark_styles if theme == "dark" else light_styles)
         self.settings["theme"] = theme
@@ -764,16 +896,46 @@ class DhilipHomeWindow(QMainWindow):
         except Exception:
             self._set_home_value("status", "Unavailable")
 
+    def set_server_url(self, url, *, clear_auth=True):
+        normalized = url.strip().rstrip("/")
+        if not normalized:
+            return False
+        self.settings["server_url"] = normalized
+        SettingsStore.save(self.settings)
+        self.api = ApiClient(normalized)
+        if clear_auth:
+            self.api.token = None
+            AuthManager().clear()
+        self.server_url_input.setText(normalized)
+        self.settings_message.setText("Server changed. Login again to this server." if clear_auth else "Server updated successfully.")
+        self.refresh_server_state()
+        return True
+
     def connect_to_server(self):
         url = self.server_url_input.text().strip()
         if not url:
             self.settings_message.setText("Enter a server URL first")
             return
-        self.api = ApiClient(url)
-        self.settings["server_url"] = url
+        self.set_server_url(url, clear_auth=True)
+
+    def test_server_connection(self):
+        url = self.server_url_input.text().strip().rstrip("/")
+        if not url:
+            self.settings_message.setText("Enter a server URL first")
+            return
+        try:
+            response = requests.get(f"{url}/api/health", timeout=5)
+            response.raise_for_status()
+            payload = response.json()
+            self.settings_message.setText(f"Online: {payload.get('server', 'DhilipHome Server')} v{payload.get('version', 'unknown')}")
+        except Exception as exc:
+            self.settings_message.setText(f"Connection failed: {exc}")
+
+    def toggle_local_server(self, enabled):
+        self.settings["start_local_server"] = bool(enabled)
+        self.local_server_toggle.setText("Local server: ON" if enabled else "Local server: OFF")
         SettingsStore.save(self.settings)
-        self.settings_message.setText("Connected to server")
-        self.refresh_server_state()
+        self.settings_message.setText("Restart the app to apply local server startup setting.")
 
     def login_to_server(self):
         username = self.username_input.text().strip()
@@ -826,7 +988,28 @@ class DhilipHomeWindow(QMainWindow):
             self.current_path = payload["path"]
             self.load_files(self.current_path)
             return
-        self.open_media_item(item)
+        if str(payload.get("mime_type", "")).startswith("video/"):
+            self.open_media_item(item)
+        else:
+            self.download_file(payload)
+
+    def download_file(self, payload):
+        path = payload.get("path")
+        if not path:
+            return
+        try:
+            response = self.api.get("/api/files/download", params={"path": path}, stream=True)
+            response.raise_for_status()
+            destination, _ = QFileDialog.getSaveFileName(self, "Save file", payload.get("name", Path(path).name))
+            if not destination:
+                return
+            with open(destination, "wb") as handle:
+                for chunk in response.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        handle.write(chunk)
+            self.settings_message.setText(f"Saved {Path(destination).name}")
+        except Exception as exc:
+            QMessageBox.warning(self, "Download", str(exc))
 
     def load_media_catalog(self):
         try:
@@ -948,7 +1131,8 @@ class DhilipHomeWindow(QMainWindow):
             QMessageBox.warning(self, "Cloud download", "Add a valid URL first")
             return
         try:
-            response = self.api.post("/api/files/remote-download", json={"url": url, "destination": destination})
+            filename = Path(url.split("?", 1)[0].rstrip("/")).name or "download.bin"
+            response = self.api.post("/api/files/remote-download", json={"url": url, "filename": filename, "destination": destination})
             if not response.ok:
                 QMessageBox.warning(self, "Cloud download", response.text)
                 return
@@ -1038,7 +1222,9 @@ class DhilipHomeWindow(QMainWindow):
 
 
 if __name__ == "__main__":
-    threading.Thread(target=start_server, daemon=True).start()
+    startup_settings = SettingsStore.load()
+    if startup_settings.get("start_local_server", True):
+        threading.Thread(target=start_server, daemon=True).start()
     app = QApplication(sys.argv)
     app.setWindowIcon(make_app_icon(128))
     app.setApplicationName(APP_NAME)
