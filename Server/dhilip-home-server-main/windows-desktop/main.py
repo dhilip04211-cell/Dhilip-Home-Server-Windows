@@ -1,11 +1,14 @@
 import json
+import mimetypes
 import os
 import sys
 import threading
+import urllib.parse
+import webbrowser
 from pathlib import Path
 
 import requests
-from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, QUrl
+from PySide6.QtCore import QEasingCurve, QDesktopServices, QPropertyAnimation, Qt, QTimer, QUrl
 from PySide6.QtGui import QBrush, QColor, QIcon, QLinearGradient, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
@@ -970,11 +973,11 @@ class DhilipHomeWindow(QMainWindow):
             self.file_list.clear()
             for folder in payload.get("directories", []):
                 item = QListWidgetItem(f"Folder: {folder['name']}")
-                item.setData(Qt.UserRole, {"path": folder["path"], "is_dir": True})
+                item.setData(Qt.UserRole, folder)
                 self.file_list.addItem(item)
             for file in payload.get("files", []):
                 item = QListWidgetItem(f"File: {file['name']}")
-                item.setData(Qt.UserRole, {"path": file["path"], "is_dir": False})
+                item.setData(Qt.UserRole, file)
                 self.file_list.addItem(item)
         except Exception:
             self.file_list.clear()
@@ -988,7 +991,8 @@ class DhilipHomeWindow(QMainWindow):
             self.current_path = payload["path"]
             self.load_files(self.current_path)
             return
-        if str(payload.get("mime_type", "")).startswith("video/"):
+        mime_type = payload.get("mime_type") or mimetypes.guess_type(payload.get("name", ""))[0] or ""
+        if str(mime_type).startswith("video/"):
             self.open_media_item(item)
         else:
             self.download_file(payload)
@@ -1091,17 +1095,21 @@ class DhilipHomeWindow(QMainWindow):
         if not media_path:
             return
 
-        stream_url = self.settings["server_url"].rstrip("/") + "/api/media/stream/" + media_path
-        if self.api.token:
-            stream_url = f"{stream_url}?token={self.api.token}"
+        mime_type = payload.get("mime_type") or mimetypes.guess_type(payload.get("filename", payload.get("name", "")))[0] or ""
+        if not str(mime_type).startswith("video/"):
+            self.download_file(payload)
+            return
 
-        self.media_player.setSource(QUrl(stream_url))
-        self.now_playing_label.setText(payload.get('filename', 'Media'))
-        self.media_meta_label.setText(f"Streaming from {self.settings['server_url']}")
-        self._animate_media_dock(True)
-        self.media_player.play()
-        self.status_badge.setText(f"Playing {payload.get('filename', 'media')}")
-        self.playback_slider.setValue(0)
+        encoded_path = urllib.parse.quote(str(media_path).lstrip("/"), safe="/")
+        stream_url = self.settings["server_url"].rstrip("/") + "/api/media/stream/" + encoded_path
+        if self.api.token:
+            stream_url = f"{stream_url}?token={urllib.parse.quote(self.api.token, safe='')}"
+
+        self.now_playing_label.setText(payload.get("filename", payload.get("name", "Media")))
+        self.media_meta_label.setText("Opening in the Windows default video player")
+        if not QDesktopServices.openUrl(QUrl(stream_url)):
+            webbrowser.open(stream_url)
+        self.status_badge.setText(f"Opened {payload.get('filename', payload.get('name', 'video'))}")
 
     def load_download_items(self):
         try:
@@ -1126,7 +1134,7 @@ class DhilipHomeWindow(QMainWindow):
 
     def start_cloud_download(self):
         url = self.cloud_url.text().strip()
-        destination = self.cloud_destination.text().strip() or "Movies"
+        destination = self.cloud_destination.text().strip() or self.current_path or ""
         if not url:
             QMessageBox.warning(self, "Cloud download", "Add a valid URL first")
             return
@@ -1134,14 +1142,24 @@ class DhilipHomeWindow(QMainWindow):
             filename = Path(url.split("?", 1)[0].rstrip("/")).name or "download.bin"
             response = self.api.post("/api/files/remote-download", json={"url": url, "filename": filename, "destination": destination})
             if not response.ok:
-                QMessageBox.warning(self, "Cloud download", response.text)
+                self._show_api_error("Cloud download", response)
                 return
+            task = response.json().get("data", {})
             self.cloud_url.clear()
             self.cloud_destination.clear()
-            self.download_list.clear()
-            self.download_list.addItem("Download queued on the server")
+            self.load_download_items()
+            self.settings_message.setText(f"Download queued: {task.get('filename', filename)}")
         except Exception as exc:
             QMessageBox.warning(self, "Cloud download", str(exc))
+
+    def _show_api_error(self, title, response):
+        try:
+            payload = response.json()
+            error = payload.get("error", {})
+            message = error.get("message") or payload.get("message") or response.text
+        except ValueError:
+            message = response.text
+        QMessageBox.warning(self, title, f"Server returned HTTP {response.status_code}: {message}")
 
     def rename_selected_item(self):
         current = self.file_list.currentItem()
@@ -1197,8 +1215,10 @@ class DhilipHomeWindow(QMainWindow):
                     data={"path": self.current_path},
                 )
             if not response.ok:
-                QMessageBox.warning(self, "Upload", response.text)
+                self._show_api_error("Upload", response)
                 return
+            uploaded = response.json().get("data", {})
+            self.settings_message.setText(f"Uploaded {uploaded.get('name', Path(file_path).name)}")
             self.load_files(self.current_path)
         except Exception as exc:
             QMessageBox.warning(self, "Upload", str(exc))
