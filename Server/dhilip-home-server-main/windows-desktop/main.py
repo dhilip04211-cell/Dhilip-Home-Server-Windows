@@ -8,8 +8,8 @@ import webbrowser
 from pathlib import Path
 
 import requests
-from PySide6.QtCore import QEasingCurve, QDesktopServices, QPropertyAnimation, Qt, QTimer, QUrl
-from PySide6.QtGui import QBrush, QColor, QIcon, QLinearGradient, QPainter, QPen, QPixmap
+from PySide6.QtCore import QEasingCurve, QPropertyAnimation, Qt, QTimer, QUrl
+from PySide6.QtGui import QBrush, QColor, QDesktopServices, QIcon, QLinearGradient, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QGraphicsOpacityEffect
 from PySide6.QtMultimedia import QAudioOutput, QMediaPlayer
 from PySide6.QtMultimediaWidgets import QVideoWidget
