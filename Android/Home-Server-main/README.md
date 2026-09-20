@@ -1,4 +1,4 @@
-# DhilipHome Android 0.3.0
+# DhilipHome Android 0.3.3
 
 Production-oriented Android/Android TV client for the DhilipHome private server.
 

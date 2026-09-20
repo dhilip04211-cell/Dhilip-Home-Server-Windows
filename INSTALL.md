@@ -10,3 +10,8 @@
 - Do not move the media root or database away from the configured server directories without updating your server configuration.
 - The app is meant to connect to the DhilipHome server over LAN or localhost.
 - The server remains authoritative for files, downloads, and media state.
+
+
+### 0.3.3 storage fix
+
+Windows 0.3.3 stores mutable runtime data outside Program Files so uploads and server-managed cloud downloads can write successfully. See `Server/dhilip-home-server-main/UPGRADE_0.3.3.md`.

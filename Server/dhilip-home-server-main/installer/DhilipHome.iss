@@ -1,5 +1,5 @@
 #define MyAppName "Dhilip Home"
-#define MyAppVersion "0.3.1"
+#define MyAppVersion "0.3.3"
 #define MyAppExeName "DhilipHome.exe"
 
 [Setup]

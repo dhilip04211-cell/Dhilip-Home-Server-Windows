@@ -1213,6 +1213,7 @@ class DhilipHomeWindow(QMainWindow):
                     "/api/files/upload",
                     files={"file": (Path(file_path).name, handle)},
                     data={"path": self.current_path},
+                    timeout=(15, 3600),
                 )
             if not response.ok:
                 self._show_api_error("Upload", response)

@@ -932,7 +932,7 @@ fun SettingsScreen(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "Version 0.1.0 • Connected to DhilipHome Server",
+                                    text = "Connected to DhilipHome Server",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

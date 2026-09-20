@@ -7,6 +7,7 @@ Implements path traversal validation, MIME detection, and safe folder operations
 import os
 import shutil
 import mimetypes
+import uuid
 from pathlib import Path
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
@@ -159,7 +160,28 @@ class FileService:
         if not is_safe_path(Config.MEDIA_ROOT, dest_file):
             raise ValueError("Destination path outside media root")
 
-        file_storage.save(str(dest_file))
+        # Write to a temporary file first so a failed/interrupted upload never
+        # leaves a file that looks complete to clients. os.replace is atomic on
+        # the same filesystem.
+        temp_file = parent / f".{safe_name}.{uuid.uuid4().hex}.uploading"
+        try:
+            file_storage.save(str(temp_file))
+            os.replace(str(temp_file), str(dest_file))
+        except PermissionError as exc:
+            try:
+                temp_file.unlink(missing_ok=True)
+            except Exception:
+                pass
+            raise PermissionError(
+                f"Server storage is not writable: {parent}. Check MEDIA_ROOT permissions."
+            ) from exc
+        except Exception:
+            try:
+                temp_file.unlink(missing_ok=True)
+            except Exception:
+                pass
+            raise
+
         return cls.get_item_info(dest_file.relative_to(Config.MEDIA_ROOT).as_posix())
 
     @classmethod

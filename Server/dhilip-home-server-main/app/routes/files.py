@@ -110,7 +110,7 @@ def _remote_download_worker(task_id):
                     return
 
             headers = {
-                "User-Agent": "DhilipHome-Server/0.3.1",
+                "User-Agent": "DhilipHome-Server/0.3.3",
                 "Accept": "*/*",
                 "Accept-Encoding": "identity",
             }
@@ -121,8 +121,17 @@ def _remote_download_worker(task_id):
             try:
                 response = _direct_opener.open(req, timeout=15)
             except urllib.error.HTTPError as exc:
-                # Client errors are permanent and should be shown to the user.
-                # Server-side 5xx errors are transient and can be retried.
+                # A stale partial file can make a remote server reject the Range
+                # with 416. Restart once from zero; otherwise preserve the useful
+                # distinction between permanent 4xx errors and retryable failures.
+                if exc.code == 416 and downloaded > 0:
+                    downloaded = 0
+                    total = 0
+                    try:
+                        tmp.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+                    continue
                 if 400 <= exc.code < 500 and exc.code != 408 and exc.code != 429:
                     _save(task_id, status="failed", error=f"Remote server returned HTTP {exc.code}", speed_bps=0)
                     return
@@ -255,14 +264,27 @@ def start_remote_download():
 
     task_id = "srvdl_" + uuid.uuid4().hex[:12]
     now = time.time()
-    with _db() as conn:
-        conn.execute("""
-            INSERT INTO download_jobs
-            (task_id,url,filename,destination,status,progress_percent,downloaded_bytes,
-             total_bytes,speed_bps,average_speed_bps,eta_seconds,error,path,created_at,updated_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        """, (task_id, url, filename, destination, "queued", 0, 0, 0, 0, 0, None,
-              None, None, now, now))
+    try:
+        with _db() as conn:
+            conn.execute("""
+                INSERT INTO download_jobs
+                (task_id,url,filename,destination,status,progress_percent,downloaded_bytes,
+                 total_bytes,speed_bps,average_speed_bps,eta_seconds,error,path,created_at,updated_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, (task_id, url, filename, destination, "queued", 0, 0, 0, 0, 0, None,
+                  None, None, now, now))
+    except sqlite3.OperationalError as e:
+        return error_response(
+            "DOWNLOAD_DATABASE_ERROR",
+            f"Server could not create the download job in its database: {e}",
+            500,
+        )
+    except OSError as e:
+        return error_response(
+            "DOWNLOAD_STORAGE_ERROR",
+            f"Server storage is not writable: {e}",
+            500,
+        )
 
     # Return immediately; the actual Internet transfer is performed by the server.
     _start_worker(task_id)
@@ -392,6 +414,10 @@ def upload_file():
         return error_response("TARGET_DIR_NOT_FOUND", str(e), 404)
     except ValueError as e:
         return error_response("INVALID_UPLOAD", str(e), 400)
+    except PermissionError as e:
+        return error_response("STORAGE_NOT_WRITABLE", str(e), 500)
+    except OSError as e:
+        return error_response("UPLOAD_STORAGE_ERROR", f"Unable to write upload to server storage: {e}", 500)
     except Exception as e:
         return error_response("UPLOAD_FAILED", str(e), 500)
 

@@ -113,6 +113,24 @@ def init_db():
                 completed_at REAL
             );
         """)
+        # Migrate databases created by older DhilipHome releases.
+        # CREATE TABLE IF NOT EXISTS does not add columns to an existing table.
+        # Missing columns here previously caused sqlite3.OperationalError and
+        # surfaced to Android/Windows as HTTP 500 when starting a download.
+        existing_columns = {row[1] for row in cursor.execute("PRAGMA table_info(download_jobs)").fetchall()}
+        migrations = {
+            "started_at": "REAL",
+            "completed_at": "REAL",
+            "average_speed_bps": "INTEGER NOT NULL DEFAULT 0",
+            "eta_seconds": "INTEGER",
+            "error": "TEXT",
+            "path": "TEXT",
+        }
+        for column, definition in migrations.items():
+            if column not in existing_columns:
+                cursor.execute(f"ALTER TABLE download_jobs ADD COLUMN {column} {definition}")
+                logger.info("Migrated download_jobs: added %s", column)
+
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_download_jobs_status ON download_jobs(status);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_download_jobs_updated ON download_jobs(updated_at);")
         # A server restart cannot leave an in-memory worker running. Preserve

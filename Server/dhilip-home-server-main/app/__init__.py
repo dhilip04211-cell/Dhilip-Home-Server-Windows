@@ -140,7 +140,11 @@ def create_app() -> Flask:
     try:
         init_db()
     except Exception as e:
-        app.logger.error(f"Failed to initialize SQLite database: {e}")
+        # A server without a writable/valid database cannot safely serve file
+        # operations. Starting anyway only turns the real startup problem into
+        # opaque HTTP 500 responses later.
+        app.logger.exception("Failed to initialize SQLite database")
+        raise RuntimeError(f"DhilipHome database initialization failed: {e}") from e
 
     # CORS configuration
     CORS(app, resources={r"/api/*": {"origins": Config.CORS_ORIGINS}}, supports_credentials=True)

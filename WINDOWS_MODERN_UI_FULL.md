@@ -7,7 +7,7 @@ Files and media are intended to remain inside the application; the server API re
 
 The build creates:
 - DhilipHome.exe — standalone GUI + in-process server
-- DhilipHome-Setup-0.3.1.exe — normal Windows installer
+- DhilipHome-Setup-0.3.3.exe — normal Windows installer
 
 No separate Python installation is required on the target machine.
 

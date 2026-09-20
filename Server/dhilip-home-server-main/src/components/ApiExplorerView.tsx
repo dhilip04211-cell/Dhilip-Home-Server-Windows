@@ -24,7 +24,7 @@ const ENDPOINTS: EndpointDef[] = [
     mockResponse: {
       status: 'ok',
       server: 'DhilipHome Server',
-      version: '0.1.0',
+      version: '0.3.3',
       timestamp: '2026-09-12T12:00:00Z',
       uptime_seconds: 14820
     }
@@ -38,7 +38,7 @@ const ENDPOINTS: EndpointDef[] = [
     description: 'Host identity, operating system, Python version, IP address, and start time.',
     mockResponse: {
       name: 'DhilipHome Server',
-      version: '0.1.0',
+      version: '0.3.3',
       hostname: 'dhilip-server',
       ip: '192.168.1.100',
       port: 8080,
@@ -58,7 +58,7 @@ const ENDPOINTS: EndpointDef[] = [
     description: 'Endpoint queried by DhilipHome Android app when discovering LAN devices.',
     mockResponse: {
       service: 'DhilipHome Server',
-      version: '0.1.0',
+      version: '0.3.3',
       port: 8080,
       api: '/api',
       device_name: 'dhilip-server',

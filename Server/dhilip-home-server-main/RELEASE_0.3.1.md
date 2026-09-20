@@ -1,4 +1,4 @@
-# DhilipHome 0.3.1 — Direct Server Download Reliability
+# DhilipHome 0.3.3 — Direct Server Download Reliability
 
 - Cloud download requests return immediately with HTTP 202 and a persistent task ID.
 - The Debian Home Server performs the actual Internet download directly.

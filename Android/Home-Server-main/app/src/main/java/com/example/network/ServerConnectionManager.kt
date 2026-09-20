@@ -191,7 +191,7 @@ object ServerConnectionManager {
                             try {
                                 val root = JSONObject(data)
                                 val server = root.optString("server", "DhilipHome Server")
-                                val version = root.optString("version", "0.1.0")
+                                val version = root.optString("version", "unknown")
                                 _isConnected.value = true
                                 _serverName.value = server
                                 _serverVersion.value = version
@@ -313,7 +313,7 @@ object ServerConnectionManager {
             val ip = json.optString("lan_ip", responsePacket.address.hostAddress ?: "")
             val port = json.optInt("port", 8080)
             val name = json.optString("service", json.optString("server", "DhilipHome Server"))
-            val version = json.optString("version", "0.1.0")
+            val version = json.optString("version", "unknown")
             if (ip.isNotBlank()) {
                 DiscoveredServer(ip = ip, port = port, name = name, version = version)
             } else null
@@ -335,7 +335,7 @@ object ServerConnectionManager {
                 discRes.close()
                 val json = JSONObject(body)
                 val name = json.optString("service", json.optString("server", json.optString("name", "DhilipHome Server")))
-                val version = json.optString("version", "0.1.0")
+                val version = json.optString("version", "unknown")
                 val portFromResponse = json.optInt("port", port)
                 val lanIp = json.optString("lan_ip", host)
                 return DiscoveredServer(ip = if (lanIp.isNotBlank()) lanIp else host, port = portFromResponse, name = name, version = version)
@@ -350,11 +350,11 @@ object ServerConnectionManager {
             if (healthRes.isSuccessful) {
                 val body = healthRes.body?.string() ?: ""
                 healthRes.close()
-                var version = "0.1.0"
+                var version = "unknown"
                 var name = "DhilipHome Server"
                 try {
                     val json = JSONObject(body)
-                    version = json.optString("version", "0.1.0")
+                    version = json.optString("version", "unknown")
                     name = json.optString("server", json.optString("service", "DhilipHome Server"))
                 } catch (_: Exception) {}
                 return DiscoveredServer(ip = host, port = port, name = name, version = version)

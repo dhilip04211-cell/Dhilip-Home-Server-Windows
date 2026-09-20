@@ -1,4 +1,4 @@
-# DhilipHome Server 0.3.0
+# DhilipHome Server 0.3.3
 
 Private LAN home media/file server for Debian/Ubuntu. The server is the source of truth for files, media indexing and cloud-download jobs.
 

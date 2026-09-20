@@ -516,6 +516,10 @@ object HttpServerRepository : ServerRepository {
             val pathPart = safeFolder.toRequestBody("text/plain".toMediaTypeOrNull())
 
             val res = api.uploadFile(body, pathPart)
+            if (!res.isSuccessful) {
+                val serverError = try { res.errorBody()?.string().orEmpty() } catch (_: Exception) { "" }
+                Log.e(TAG, "Upload rejected: HTTP ${res.code()} ${res.message()} $serverError")
+            }
             res.isSuccessful
         } catch (e: Exception) {
             Log.e(TAG, "Failed to upload file: ${e.message}")

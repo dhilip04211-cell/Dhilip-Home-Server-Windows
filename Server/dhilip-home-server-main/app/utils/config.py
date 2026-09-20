@@ -70,7 +70,7 @@ class Config:
 
     # Server Info
     NAME = "DhilipHome Server"
-    VERSION = "0.3.0"
+    VERSION = "0.3.3"
 
     # Network Binding
     HOST = os.getenv("HOST", "0.0.0.0")
@@ -79,11 +79,27 @@ class Config:
     HOSTNAME = socket.gethostname()
 
     # Paths
+    # Never put mutable runtime data inside the Windows installation directory
+    # (normally C:\Program Files\Dhilip Home). Program Files is commonly
+    # read-only for the normal desktop process, which previously caused both
+    # uploads and cloud-download job creation to return HTTP 500.
+    #
+    # Environment variables remain authoritative so portable/custom installs
+    # can choose their own storage locations.
     BASE_DIR = BASE_DIR
-    MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media"))).resolve()
-    DATABASE_PATH = Path(os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "dhiliphome.db"))).resolve()
-    LOG_PATH = Path(os.getenv("LOG_PATH", str(BASE_DIR / "logs" / "server.log"))).resolve()
-    CONFIG_DIR = BASE_DIR / "config"
+    if os.name == "nt":
+        _local_app_data = Path(os.getenv("LOCALAPPDATA") or (Path.home() / "AppData" / "Local"))
+        _runtime_root = Path(os.getenv("DHILIPHOME_DATA_DIR") or (_local_app_data / "DhilipHome"))
+        _default_media_root = Path.home() / "Documents" / "DhilipHome" / "Media"
+        MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(_default_media_root))).resolve()
+        DATABASE_PATH = Path(os.getenv("DATABASE_PATH", str(_runtime_root / "data" / "dhiliphome.db"))).resolve()
+        LOG_PATH = Path(os.getenv("LOG_PATH", str(_runtime_root / "logs" / "server.log"))).resolve()
+        CONFIG_DIR = Path(os.getenv("CONFIG_DIR", str(_runtime_root / "config"))).resolve()
+    else:
+        MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", str(BASE_DIR / "media"))).resolve()
+        DATABASE_PATH = Path(os.getenv("DATABASE_PATH", str(BASE_DIR / "data" / "dhiliphome.db"))).resolve()
+        LOG_PATH = Path(os.getenv("LOG_PATH", str(BASE_DIR / "logs" / "server.log"))).resolve()
+        CONFIG_DIR = Path(os.getenv("CONFIG_DIR", str(BASE_DIR / "config"))).resolve()
 
     # Security & Auth
     SECRET_KEY = os.getenv("DHILIPHOME_SECRET_KEY", "dhiliphome-insecure-dev-secret-key-replace-in-prod")
@@ -97,7 +113,7 @@ class Config:
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
 
     # Limits
-    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH_MB", "500")) * 1024 * 1024  # bytes
+    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH_MB", "10240")) * 1024 * 1024  # bytes (10 GB default; override with env)
 
     @classmethod
     def ensure_directories(cls):

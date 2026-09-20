@@ -36,9 +36,9 @@ object ServerConfig {
     private const val KEY_SERVER_PORT = "server_port"
     private const val KEY_USE_HTTPS = "use_https"
 
-    var connectionTimeoutSec: Long = 5L
-    var readTimeoutSec: Long = 15L
-    var writeTimeoutSec: Long = 15L
+    var connectionTimeoutSec: Long = 10L
+    var readTimeoutSec: Long = 120L
+    var writeTimeoutSec: Long = 600L
 
     var appContext: Context? = null
         private set
@@ -210,7 +210,7 @@ object ServerConfig {
             response.close()
 
             if (statusCode in 200..299) {
-                var version = "0.1.0"
+                var version = "unknown"
                 var serverName = "DhilipHome Server"
                 try {
                     val json = org.json.JSONObject(bodyString)
